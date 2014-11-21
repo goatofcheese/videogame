@@ -1,0 +1,147 @@
+<html>
+	<head> 
+	<meta content="text/html;charset=utf-8" http-equiv="Content-Type">
+	<meta content="utf-8" http-equiv="encoding">
+	<title>My first Three.js app</title>
+	<style> body { margin: 0; } canvas { width: 100%; height: 100% } </style> 
+	</head>
+<body>
+<!--<script src="http://threejs.org/build/three.js"></script> -->
+<!--<script src="http://threejs.org/build/stats.js"></script> -->
+<script src="js/three.js"></script>
+<script src="js/stats.js"></script>
+<script src="https://cdn.socket.io/socket.io-1.2.0.js"></script>
+<script> 
+
+var container, stats;
+var camera, scene, raycaster, renderer;
+var mouse = new THREE.Vector2(), INTERSECTED;
+var radius = 100, theta = 0;
+var clock;
+
+//set up websocket
+var socket = io();
+var playerColor = "0x" + (Math.random()*0xFFFFFF<<0).toString(16);
+
+
+
+init();
+animate();
+    
+
+function init() {
+	clock = new THREE.Clock();
+	container = document.createElement( 'div' );
+	document.body.appendChild( container );
+	var info = document.createElement( 'div' );
+	info.style.position = 'absolute';
+	info.style.top = '10px';
+	info.style.width = '100%';
+	info.style.textAlign = 'center';
+	info.innerHTML = '<a href="http://threejs.org" target="_blank">three.js</a> webgl - interactive cubes';
+	
+	container.appendChild( info );
+	
+	camera = new THREE.PerspectiveCamera( 45, window.innerWidth / window.innerHeight, 1, 1000 );
+	scene = new THREE.Scene();
+	
+	var light = new THREE.DirectionalLight( 0xffffff, 1 );
+	light.position.set( 1, 1, 1 ).normalize();
+	scene.add( light );
+	
+	var geometry = new THREE.BoxGeometry( 10, 10, 10 );
+	
+	for ( var i = 0, j=40; i < j; i ++ ) {
+		var object = new THREE.Mesh(
+						geometry, 
+						new THREE.MeshLambertMaterial( { color: Math.random() * 0xffffff } )
+					);
+					
+		object.position.x = (i - (j / 2)) * (window.innerWidth / j);
+		object.position.y = 0;
+		object.position.z = -300
+		
+		object.rotation.x = 0;
+		object.rotation.y = 0;
+		object.rotation.z = Math.random() * Math.PI;
+		
+		object.scale.x = 1;
+		object.scale.y = 1;
+		object.scale.z = 1;
+		
+		scene.add( object );
+	}
+	
+	raycaster = new THREE.Raycaster();
+	renderer = new THREE.WebGLRenderer();
+	renderer.setClearColor( 0xf0f0f0 );
+	renderer.setSize( window.innerWidth, window.innerHeight );
+	renderer.sortObjects = true;
+	container.appendChild(renderer.domElement);
+	
+	stats = new Stats();
+	stats.domElement.style.position = 'absolute';
+	stats.domElement.style.top = '0px';
+	container.appendChild( stats.domElement );
+	document.addEventListener( 'mousemove', onDocumentMouseMove, false );
+
+	window.addEventListener( 'resize', onWindowResize, false );
+}
+
+function onWindowResize() {
+	camera.aspect = window.innerWidth / window.innerHeight;
+	camera.updateProjectionMatrix();
+	renderer.setSize( window.innerWidth, window.innerHeight );
+}
+
+function onDocumentMouseMove( event ) {
+	event.preventDefault();
+	mouse.x = ( event.clientX / window.innerWidth ) * 2 - 1;
+	mouse.y = - ( event.clientY / window.innerHeight ) * 2 + 1;
+}
+
+
+function animate() {
+	requestAnimationFrame( animate );
+	theta += clock.getDelta() * (Math.PI / 2);
+	render();
+	stats.update();
+}
+
+function render() {
+	// find intersections
+	var vector = new THREE.Vector3( mouse.x, mouse.y, 1 ).unproject( camera );
+	raycaster.set( camera.position, vector.sub( camera.position ).normalize() );
+	
+	var intersects = raycaster.intersectObjects( scene.children );
+	if ( intersects.length > 0 ) {
+		if ( INTERSECTED != intersects[ 0 ].object ) {
+			theta = 0;
+			INTERSECTED = intersects[ 0 ].object;
+		}
+		INTERSECTED.rotation.y = theta;
+        console.log(playerColor);
+        INTERSECTED.material.color.setHex( playerColor );
+        //INTERSECTED.material.emissive.setHex( 0xff0000 );
+        var claimedCube = {
+            "id": INTERSECTED.id,
+            "color": playerColor
+        };
+        socket.emit('cube claim', claimedCube);
+	} else {
+
+	}
+	renderer.render( scene, camera );
+}
+    
+function color(idPlusColor){
+    scene.getObjectById(idPlusColor["id"], true).material.color.setHex(idPlusColor["color"]);
+}
+    
+socket.on('cube claim', color);
+    
+</script>
+<div id=info> </div>
+
+</body>
+</html>
