@@ -21,7 +21,7 @@ var clock;
 var socket = io();
 
 var playerColor = "0x" + (Math.random()*0xFFFFFF<<0).toString(16);
-
+var arbitraryCounter = 0;
 
 init();
 animate();
@@ -37,15 +37,16 @@ function init() {
 	info.style.width = '100%';
 	info.style.textAlign = 'center';
 	info.innerHTML = 'The most techincally advanced video game <b>ever created</b>';
-	
 	container.appendChild( info );
 	
 	camera = new THREE.PerspectiveCamera( 45, window.innerWidth / window.innerHeight, 1, 1000 );
 	scene = new THREE.Scene();
 	
 	var light = new THREE.DirectionalLight( 0xffffff, 1 );
-	light.position.set( 1, 1, 1 ).normalize();
+	light.position.set( 0, 30, 50 );
 	scene.add( light );
+	var amb = new THREE.AmbientLight (0x00ff78);
+	//scene.add(amb);
 	
 	var geometry = new THREE.BoxGeometry( 10, 10, 10 );
 	
@@ -53,10 +54,17 @@ function init() {
 		var object = new THREE.Mesh(
 						geometry, 
 						new THREE.MeshLambertMaterial( { color: Math.random() * 0xffffff } )
+						/*new THREE.MeshPhongMaterial( {
+							ambient: 0x003030,
+							color: 0xdddddd,
+							specular: 0x009900,
+							shininess: 30,
+							shading: THREE.FlatShading
+						})*/
 					);
 					
 		object.position.x = (i - (j / 2)) * (window.innerWidth / j);
-		object.position.y = 0;
+		object.position.y = 10;
 		object.position.z = -300
 		
 		object.rotation.x = 0;
@@ -69,12 +77,35 @@ function init() {
 		
 		scene.add( object );
 	}
+	/*
+	var geometry = new THREE.BoxGeometry( 1000, 1000, 10 );
+	var object = new THREE.Mesh(
+				geometry, 
+				new THREE.MeshLambertMaterial( { color: Math.random() * 0xffffff } )
+			);
+			
+	object.position.x = 0;
+	object.position.y = 10;
+	object.position.z = -500
+
+	object.rotation.x = 0;
+	object.rotation.y = 0;
+	object.rotation.z = 0;//	Math.random() * Math.PI;
 	
+	object.scale.x = 1;
+	object.scale.y = 1;
+	object.scale.z = 1;
+
+	scene.add( object );
+	
+	*/
 	raycaster = new THREE.Raycaster();
 	renderer = new THREE.WebGLRenderer();
 	renderer.setClearColor( 0xf0f0f0 );
 	renderer.setSize( window.innerWidth, window.innerHeight );
 	renderer.sortObjects = true;
+	renderer.shadowMapEnabled = true;
+	
 	container.appendChild(renderer.domElement);
 	
 	stats = new Stats();
@@ -121,6 +152,7 @@ function render() {
 		INTERSECTED.rotation.x = 0;
 		INTERSECTED.rotation.y = 0;
 		INTERSECTED.rotation.z = 0;
+		INTERSECTED.position.y += 10;
 		INTERSECTED.toRotate = playerAxis;
         var claimedCube = {
             "id": INTERSECTED.id,
@@ -136,12 +168,14 @@ function render() {
 		objects[i].rotation.x = 0;
 		objects[i].rotation.y = 0;
 		objects[i].rotation.z = 0;
-		objects[i].translateOnAxis(new THREE.Vector3(0, 1, 0), Math.cos(theta));
+		//objects[i].translateOnAxis(objects[i].up, (2 * Math.sin(objects[i].position.x + theta)));
+		objects[i].position.y = (2 * Math.sin(objects[i].position.x + theta) * 10);
 		objects[i].rotation[objects[i].toRotate] = theta;
 
 	}
-	renderer.render( scene, camera );
-	
+	//if(arbitraryCounter % 17 == 0)
+		renderer.render( scene, camera );
+	arbitraryCounter++;
 }
     
 function color(cubeClaim){
